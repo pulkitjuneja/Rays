@@ -1,10 +1,16 @@
-// [header]
-// A very basic raytracer example.
-// [/header]
-// [compile]
-// c++ -o raytracer -O3 -Wall raytracer.cpp
-// [/compile]
-// [ignore]
+//[header]
+// A simple program to demonstrate how to implement Whitted-style ray-tracing
+//[/header]
+//[compile]
+// Download the whitted.cpp file to a folder.
+// Open a shell/terminal, and run the following command where the files is saved:
+//
+// c++ -o whitted whitted.cpp -std=c++11 -O3
+//
+// Run with: ./whitted. Open the file ./out.png in Photoshop or any program
+// reading PPM files.
+//[/compile]
+//[ignore]
 // Copyright (C) 2012  www.scratchapixel.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,251 +25,577 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-// [/ignore]
-#include <cstdlib>
+//[/ignore]
+
+
 #include <cstdio>
-#include <cmath>
-#include <fstream>
-#include<algorithm>
+#include <cstdlib>
+#include <algorithm>
+#include <memory>
 #include <vector>
+#include <utility>
+#include <cstdint>
 #include <iostream>
-#include <cassert>
+#include <fstream>
+#include <cmath>
 
-#if defined __linux__ || defined __APPLE__
-// "Compiled for Linux
-#else
-// Windows doesn't define these values by default, Linux does
-#define M_PI 3.141592653589793
-#define INFINITY 1e8
-#endif
+#define M_PI 3.14159
 
-template<typename T>
-class Vec3
-{
+const float kInfinity = std::numeric_limits<float>::max();
+
+class Vec3f {
 public:
-	T x, y, z;
-	Vec3() : x(T(0)), y(T(0)), z(T(0)) {}
-	Vec3(T xx) : x(xx), y(xx), z(xx) {}
-	Vec3(T xx, T yy, T zz) : x(xx), y(yy), z(zz) {}
-	Vec3& normalize()
+	Vec3f() : x(0), y(0), z(0) {}
+	Vec3f(float xx) : x(xx), y(xx), z(xx) {}
+	Vec3f(float xx, float yy, float zz) : x(xx), y(yy), z(zz) {}
+	Vec3f operator * (const float &r) const { return Vec3f(x * r, y * r, z * r); }
+	Vec3f operator * (const Vec3f &v) const { return Vec3f(x * v.x, y * v.y, z * v.z); }
+	Vec3f operator - (const Vec3f &v) const { return Vec3f(x - v.x, y - v.y, z - v.z); }
+	Vec3f operator + (const Vec3f &v) const { return Vec3f(x + v.x, y + v.y, z + v.z); }
+	Vec3f operator - () const { return Vec3f(-x, -y, -z); }
+	Vec3f& operator += (const Vec3f &v) { x += v.x, y += v.y, z += v.z; return *this; }
+	friend Vec3f operator * (const float &r, const Vec3f &v)
 	{
-		T nor2 = length2();
-		if (nor2 > 0) {
-			T invNor = 1 / sqrt(nor2);
-			x *= invNor, y *= invNor, z *= invNor;
-		}
-		return *this;
+		return Vec3f(v.x * r, v.y * r, v.z * r);
 	}
-	Vec3<T> operator * (const T &f) const { return Vec3<T>(x * f, y * f, z * f); }
-	Vec3<T> operator * (const Vec3<T> &v) const { return Vec3<T>(x * v.x, y * v.y, z * v.z); }
-	T dot(const Vec3<T> &v) const { return x * v.x + y * v.y + z * v.z; }
-	Vec3<T> operator - (const Vec3<T> &v) const { return Vec3<T>(x - v.x, y - v.y, z - v.z); }
-	Vec3<T> operator + (const Vec3<T> &v) const { return Vec3<T>(x + v.x, y + v.y, z + v.z); }
-	Vec3<T>& operator += (const Vec3<T> &v) { x += v.x, y += v.y, z += v.z; return *this; }
-	Vec3<T>& operator *= (const Vec3<T> &v) { x *= v.x, y *= v.y, z *= v.z; return *this; }
-	Vec3<T> operator - () const { return Vec3<T>(-x, -y, -z); }
-	T length2() const { return x * x + y * y + z * z; }
-	T length() const { return sqrt(length2()); }
-	friend std::ostream & operator << (std::ostream &os, const Vec3<T> &v)
+	friend std::ostream & operator << (std::ostream &os, const Vec3f &v)
 	{
-		os << "[" << v.x << " " << v.y << " " << v.z << "]";
-		return os;
+		return os << v.x << ", " << v.y << ", " << v.z;
 	}
+	float x, y, z;
 };
 
-typedef Vec3<float> Vec3f;
-
-class Sphere
+class Vec2f
 {
 public:
-	Vec3f center;                           /// position of the sphere
-	float radius, radius2;                  /// sphere radius and radius^2
-	Vec3f surfaceColor, emissionColor;      /// surface color and emission (light)
-	float transparency, reflection;         /// surface transparency and reflectivity
-	Sphere(
-		const Vec3f &c,
-		const float &r,
-		const Vec3f &sc,
-		const float &refl = 0,
-		const float &transp = 0,
-		const Vec3f &ec = 0) :
-		center(c), radius(r), radius2(r * r), surfaceColor(sc), emissionColor(ec),
-		transparency(transp), reflection(refl)
-	{ /* empty */
+	Vec2f() : x(0), y(0) {}
+	Vec2f(float xx) : x(xx), y(xx) {}
+	Vec2f(float xx, float yy) : x(xx), y(yy) {}
+	Vec2f operator * (const float &r) const { return Vec2f(x * r, y * r); }
+	Vec2f operator + (const Vec2f &v) const { return Vec2f(x + v.x, y + v.y); }
+	float x, y;
+};
+
+Vec3f normalize(const Vec3f &v)
+{
+	float mag2 = v.x * v.x + v.y * v.y + v.z * v.z;
+	if (mag2 > 0) {
+		float invMag = 1 / sqrtf(mag2);
+		return Vec3f(v.x * invMag, v.y * invMag, v.z * invMag);
 	}
-	//[comment]
-	// Compute a ray-sphere intersection using the geometric solution
-	//[/comment]
-	bool intersect(const Vec3f &rayorig, const Vec3f &raydir, float &t0, float &t1) const
+
+	return v;
+}
+
+inline
+float dotProduct(const Vec3f &a, const Vec3f &b)
+{
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+Vec3f crossProduct(const Vec3f &a, const Vec3f &b)
+{
+	return Vec3f(
+		a.y * b.z - a.z * b.y,
+		a.z * b.x - a.x * b.z,
+		a.x * b.y - a.y * b.x
+	);
+}
+
+inline
+float clamp(const float &lo, const float &hi, const float &v)
+{
+	return std::max(lo, std::min(hi, v));
+}
+
+inline
+float deg2rad(const float &deg)
+{
+	return deg * M_PI / 180;
+}
+
+inline
+Vec3f mix(const Vec3f &a, const Vec3f& b, const float &mixValue)
+{
+	return a * (1 - mixValue) + b * mixValue;
+}
+
+struct Options
+{
+	uint32_t width;
+	uint32_t height;
+	float fov;
+	float imageAspectRatio;
+	uint8_t maxDepth;
+	Vec3f backgroundColor;
+	float bias;
+};
+
+class Light
+{
+public:
+	Light(const Vec3f &p, const Vec3f &i) : position(p), intensity(i) {}
+	Vec3f position;
+	Vec3f intensity;
+};
+
+enum MaterialType { DIFFUSE_AND_GLOSSY, REFLECTION_AND_REFRACTION, REFLECTION };
+
+class Object
+{
+public:
+	Object() :
+		materialType(DIFFUSE_AND_GLOSSY),
+		ior(1.3), Kd(0.8), Ks(0.2), diffuseColor(0.2), specularExponent(25) {}
+	virtual ~Object() {}
+	virtual bool intersect(const Vec3f &, const Vec3f &, float &, uint32_t &, Vec2f &) const = 0;
+	virtual void getSurfaceProperties(const Vec3f &, const Vec3f &, const uint32_t &, const Vec2f &, Vec3f &, Vec2f &) const = 0;
+	virtual Vec3f evalDiffuseColor(const Vec2f &) const { return diffuseColor; }
+	// material properties
+	MaterialType materialType;
+	float ior;
+	float Kd, Ks;
+	Vec3f diffuseColor;
+	float specularExponent;
+};
+
+bool solveQuadratic(const float &a, const float &b, const float &c, float &x0, float &x1)
+{
+	float discr = b * b - 4 * a * c;
+	if (discr < 0) return false;
+	else if (discr == 0) x0 = x1 = -0.5 * b / a;
+	else {
+		float q = (b > 0) ?
+			-0.5 * (b + sqrt(discr)) :
+			-0.5 * (b - sqrt(discr));
+		x0 = q / a;
+		x1 = c / q;
+	}
+	if (x0 > x1) std::swap(x0, x1);
+	return true;
+}
+
+class Sphere : public Object {
+public:
+	Sphere(const Vec3f &c, const float &r) : center(c), radius(r), radius2(r * r) {}
+	bool intersect(const Vec3f &orig, const Vec3f &dir, float &tnear, uint32_t &index, Vec2f &uv) const
 	{
-		Vec3f l = center - rayorig;
-		float tca = l.dot(raydir);
-		if (tca < 0) return false;
-		float d2 = l.dot(l) - tca * tca;
-		if (d2 > radius2) return false;
-		float thc = sqrt(radius2 - d2);
-		t0 = tca - thc;
-		t1 = tca + thc;
+		// analytic solution
+		Vec3f L = orig - center;
+		float a = dotProduct(dir, dir);
+		float b = 2 * dotProduct(dir, L);
+		float c = dotProduct(L, L) - radius2;
+		float t0, t1;
+		if (!solveQuadratic(a, b, c, t0, t1)) return false;
+		if (t0 < 0) t0 = t1;
+		if (t0 < 0) return false;
+		tnear = t0;
 
 		return true;
 	}
+
+	void getSurfaceProperties(const Vec3f &P, const Vec3f &I, const uint32_t &index, const Vec2f &uv, Vec3f &N, Vec2f &st) const
+	{
+		N = normalize(P - center);
+	}
+
+	Vec3f center;
+	float radius, radius2;
 };
 
-//[comment]
-// This variable controls the maximum recursion depth
-//[/comment]
-#define MAX_RAY_DEPTH 5
-
-float mix(const float &a, const float &b, const float &mix)
+bool rayTriangleIntersect(
+	const Vec3f &v0, const Vec3f &v1, const Vec3f &v2,
+	const Vec3f &orig, const Vec3f &dir,
+	float &tnear, float &u, float &v)
 {
-	return b * mix + a * (1 - mix);
+	Vec3f edge1 = v1 - v0;
+	Vec3f edge2 = v2 - v0;
+	Vec3f pvec = crossProduct(dir, edge2);
+	float det = dotProduct(edge1, pvec);
+	if (det == 0 || det < 0) return false;
+
+	Vec3f tvec = orig - v0;
+	u = dotProduct(tvec, pvec);
+	if (u < 0 || u > det) return false;
+
+	Vec3f qvec = crossProduct(tvec, edge1);
+	v = dotProduct(dir, qvec);
+	if (v < 0 || u + v > det) return false;
+
+	float invDet = 1 / det;
+
+	tnear = dotProduct(edge2, qvec) * invDet;
+	u *= invDet;
+	v *= invDet;
+
+	return true;
 }
 
-//[comment]
-// This is the main trace function. It takes a ray as argument (defined by its origin
-// and direction). We test if this ray intersects any of the geometry in the scene.
-// If the ray intersects an object, we compute the intersection point, the normal
-// at the intersection point, and shade this point using this information.
-// Shading depends on the surface property (is it transparent, reflective, diffuse).
-// The function returns a color for the ray. If the ray intersects an object that
-// is the color of the object at the intersection point, otherwise it returns
-// the background color.
-//[/comment]
-Vec3f trace(
-	const Vec3f &rayorig,
-	const Vec3f &raydir,
-	const std::vector<Sphere> &spheres,
-	const int &depth)
+class MeshTriangle : public Object
 {
-	//if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
-	float tnear = INFINITY;
-	const Sphere* sphere = NULL;
-	// find intersection of this ray with the sphere in the scene
-	for (unsigned i = 0; i < spheres.size(); ++i) {
-		float t0 = INFINITY, t1 = INFINITY;
-		if (spheres[i].intersect(rayorig, raydir, t0, t1)) {
-			if (t0 < 0) t0 = t1;
-			if (t0 < tnear) {
-				tnear = t0;
-				sphere = &spheres[i];
+public:
+	MeshTriangle(
+		const Vec3f *verts,
+		const uint32_t *vertsIndex,
+		const uint32_t &numTris,
+		const Vec2f *st)
+	{
+		uint32_t maxIndex = 0;
+		for (uint32_t i = 0; i < numTris * 3; ++i)
+			if (vertsIndex[i] > maxIndex) maxIndex = vertsIndex[i];
+		maxIndex += 1;
+		vertices = std::unique_ptr<Vec3f[]>(new Vec3f[maxIndex]);
+		memcpy(vertices.get(), verts, sizeof(Vec3f) * maxIndex);
+		vertexIndex = std::unique_ptr<uint32_t[]>(new uint32_t[numTris * 3]);
+		memcpy(vertexIndex.get(), vertsIndex, sizeof(uint32_t) * numTris * 3);
+		numTriangles = numTris;
+		stCoordinates = std::unique_ptr<Vec2f[]>(new Vec2f[maxIndex]);
+		memcpy(stCoordinates.get(), st, sizeof(Vec2f) * maxIndex);
+	}
+
+	bool intersect(const Vec3f &orig, const Vec3f &dir, float &tnear, uint32_t &index, Vec2f &uv) const
+	{
+		bool intersect = false;
+		for (uint32_t k = 0; k < numTriangles; ++k) {
+			const Vec3f & v0 = vertices[vertexIndex[k * 3]];
+			const Vec3f & v1 = vertices[vertexIndex[k * 3 + 1]];
+			const Vec3f & v2 = vertices[vertexIndex[k * 3 + 2]];
+			float t, u, v;
+			if (rayTriangleIntersect(v0, v1, v2, orig, dir, t, u, v) && t < tnear) {
+				tnear = t;
+				uv.x = u;
+				uv.y = v;
+				index = k;
+				intersect |= true;
 			}
 		}
+
+		return intersect;
 	}
-	// if there's no intersection return black or background color
-	if (!sphere) return Vec3f(2);
-	Vec3f surfaceColor = 0; // color of the ray/surfaceof the object intersected by the ray
-	Vec3f phit = rayorig + raydir * tnear; // point of intersection
-	Vec3f nhit = phit - sphere->center; // normal at the intersection point
-	nhit.normalize(); // normalize normal direction
-					  // If the normal and the view direction are not opposite to each other
-					  // reverse the normal direction. That also means we are inside the sphere so set
-					  // the inside bool to true. Finally reverse the sign of IdotN which we want
-					  // positive.
-	float bias = 1e-4; // add some bias to the point from which we will be tracing
-	bool inside = false;
-	if (raydir.dot(nhit) > 0) nhit = -nhit, inside = true;
-	if ((sphere->transparency > 0 || sphere->reflection > 0) && depth < MAX_RAY_DEPTH) {
-		float facingratio = -raydir.dot(nhit);
-		// change the mix value to tweak the effect
-		float fresneleffect = mix(pow(1 - facingratio, 3), 1, 0.1);
-		// compute reflection direction (not need to normalize because all vectors
-		// are already normalized)
-		Vec3f refldir = raydir - nhit * 2 * raydir.dot(nhit);
-		refldir.normalize();
-		Vec3f reflection = trace(phit + nhit * bias, refldir, spheres, depth + 1);
-		Vec3f refraction = 0;
-		// if the sphere is also transparent compute refraction ray (transmission)
-		if (sphere->transparency) {
-			float ior = 1.1, eta = (inside) ? ior : 1 / ior; // are we inside or outside the surface?
-			float cosi = -nhit.dot(raydir);
-			float k = 1 - eta * eta * (1 - cosi * cosi);
-			Vec3f refrdir = raydir * eta + nhit * (eta *  cosi - sqrt(k));
-			refrdir.normalize();
-			refraction = trace(phit - nhit * bias, refrdir, spheres, depth + 1);
-		}
-		// the result is a mix of reflection and refraction (if the sphere is transparent)
-		surfaceColor = (
-			reflection * fresneleffect +
-			refraction * (1 - fresneleffect) * sphere->transparency) * sphere->surfaceColor;
+
+	void getSurfaceProperties(const Vec3f &P, const Vec3f &I, const uint32_t &index, const Vec2f &uv, Vec3f &N, Vec2f &st) const
+	{
+		const Vec3f &v0 = vertices[vertexIndex[index * 3]];
+		const Vec3f &v1 = vertices[vertexIndex[index * 3 + 1]];
+		const Vec3f &v2 = vertices[vertexIndex[index * 3 + 2]];
+		Vec3f e0 = normalize(v1 - v0);
+		Vec3f e1 = normalize(v2 - v1);
+		N = normalize(crossProduct(e0, e1));
+		const Vec2f &st0 = stCoordinates[vertexIndex[index * 3]];
+		const Vec2f &st1 = stCoordinates[vertexIndex[index * 3 + 1]];
+		const Vec2f &st2 = stCoordinates[vertexIndex[index * 3 + 2]];
+		st = st0 * (1 - uv.x - uv.y) + st1 * uv.x + st2 * uv.y;
+	}
+
+	Vec3f evalDiffuseColor(const Vec2f &st) const
+	{
+		float scale = 5;
+		float pattern = (fmodf(st.x * scale, 1) > 0.5) ^ (fmodf(st.y * scale, 1) > 0.5);
+		return mix(Vec3f(0.815, 0.235, 0.031), Vec3f(0.937, 0.937, 0.231), pattern);
+	}
+
+	std::unique_ptr<Vec3f[]> vertices;
+	uint32_t numTriangles;
+	std::unique_ptr<uint32_t[]> vertexIndex;
+	std::unique_ptr<Vec2f[]> stCoordinates;
+};
+
+// [comment]
+// Compute reflection direction
+// [/comment]
+Vec3f reflect(const Vec3f &I, const Vec3f &N)
+{
+	return I - 2 * dotProduct(I, N) * N;
+}
+
+// [comment]
+// Compute refraction direction using Snell's law
+//
+// We need to handle with care the two possible situations:
+//
+//    - When the ray is inside the object
+//
+//    - When the ray is outside.
+//
+// If the ray is outside, you need to make cosi positive cosi = -N.I
+//
+// If the ray is inside, you need to invert the refractive indices and negate the normal N
+// [/comment]
+Vec3f refract(const Vec3f &I, const Vec3f &N, const float &ior)
+{
+	float cosi = clamp(-1, 1, dotProduct(I, N));
+	float etai = 1, etat = ior;
+	Vec3f n = N;
+	if (cosi < 0) { cosi = -cosi; }
+	else { std::swap(etai, etat); n = -N; }
+	float eta = etai / etat;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+	return k < 0 ? 0 : eta * I + (eta * cosi - sqrtf(k)) * n;
+}
+
+// [comment]
+// Compute Fresnel equation
+//
+// \param I is the incident view direction
+//
+// \param N is the normal at the intersection point
+//
+// \param ior is the mateural refractive index
+//
+// \param[out] kr is the amount of light reflected
+// [/comment]
+void fresnel(const Vec3f &I, const Vec3f &N, const float &ior, float &kr)
+{
+	float cosi = clamp(-1, 1, dotProduct(I, N));
+	float etai = 1, etat = ior;
+	if (cosi > 0) { std::swap(etai, etat); }
+	// Compute sini using Snell's law
+	float sint = etai / etat * sqrtf(std::max(0.f, 1 - cosi * cosi));
+	// Total internal reflection
+	if (sint >= 1) {
+		kr = 1;
 	}
 	else {
-		// it's a diffuse object, no need to raytrace any further
-		for (unsigned i = 0; i < spheres.size(); ++i) {
-			if (spheres[i].emissionColor.x > 0) {
-				// this is a light
-				Vec3f transmission = 1;
-				Vec3f lightDirection = spheres[i].center - phit;
-				lightDirection.normalize();
-				for (unsigned j = 0; j < spheres.size(); ++j) {
-					if (i != j) {
-						float t0, t1;
-						if (spheres[j].intersect(phit + nhit * bias, lightDirection, t0, t1)) {
-							transmission = 0;
-							break;
-						}
-					}
-				}
-				surfaceColor += sphere->surfaceColor * transmission *
-					std::max(float(0), nhit.dot(lightDirection)) * spheres[i].emissionColor;
-			}
-		}
+		float cost = sqrtf(std::max(0.f, 1 - sint * sint));
+		cosi = fabsf(cosi);
+		float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+		float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+		kr = (Rs * Rs + Rp * Rp) / 2;
 	}
-
-	return surfaceColor + sphere->emissionColor;
+	// As a consequence of the conservation of energy, transmittance is given by:
+	// kt = 1 - kr;
 }
 
-//[comment]
-// Main rendering function. We compute a camera ray for each pixel of the image
-// trace it and return a color. If the ray hits a sphere, we return the color of the
-// sphere at the intersection point, else we return the background color.
-//[/comment]
-void render(const std::vector<Sphere> &spheres)
+// [comment]
+// Returns true if the ray intersects an object, false otherwise.
+//
+// \param orig is the ray origin
+//
+// \param dir is the ray direction
+//
+// \param objects is the list of objects the scene contains
+//
+// \param[out] tNear contains the distance to the cloesest intersected object.
+//
+// \param[out] index stores the index of the intersect triangle if the interesected object is a mesh.
+//
+// \param[out] uv stores the u and v barycentric coordinates of the intersected point
+//
+// \param[out] *hitObject stores the pointer to the intersected object (used to retrieve material information, etc.)
+//
+// \param isShadowRay is it a shadow ray. We can return from the function sooner as soon as we have found a hit.
+// [/comment]
+bool trace(
+	const Vec3f &orig, const Vec3f &dir,
+	const std::vector<std::unique_ptr<Object>> &objects,
+	float &tNear, uint32_t &index, Vec2f &uv, Object **hitObject)
 {
-	unsigned width = 640, height = 480;
-	Vec3f *image = new Vec3f[width * height], *pixel = image;
-	float invWidth = 1 / float(width), invHeight = 1 / float(height);
-	float fov = 30, aspectratio = width / float(height);
-	float angle = tan(M_PI * 0.5 * fov / 180.);
-	// Trace rays
-	for (unsigned y = 0; y < height; ++y) {
-		for (unsigned x = 0; x < width; ++x, ++pixel) {
-			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-			Vec3f raydir(xx, yy, -1);
-			raydir.normalize();
-			*pixel = trace(Vec3f(0), raydir, spheres, 0);
+	*hitObject = nullptr;
+	for (uint32_t k = 0; k < objects.size(); ++k) {
+		float tNearK = kInfinity;
+		uint32_t indexK;
+		Vec2f uvK;
+		if (objects[k]->intersect(orig, dir, tNearK, indexK, uvK) && tNearK < tNear) {
+			*hitObject = objects[k].get();
+			tNear = tNearK;
+			index = indexK;
+			uv = uvK;
 		}
 	}
-	// Save result to a PPM image (keep these flags if you compile under Windows)
-	std::ofstream ofs("./untitled.ppm", std::ios::out | std::ios::binary);
-	ofs << "P6\n" << width << " " << height << "\n255\n";
-	for (unsigned i = 0; i < width * height; ++i) {
-		ofs << (unsigned char)(std::min(float(1), image[i].x) * 255) <<
-			(unsigned char)(std::min(float(1), image[i].y) * 255) <<
-			(unsigned char)(std::min(float(1), image[i].z) * 255);
-	}
-	ofs.close();
-	delete[] image;
+
+	return (*hitObject != nullptr);
 }
 
-//[comment]
-// In the main function, we will create the scene which is composed of 5 spheres
-// and 1 light (which is also a sphere). Then, once the scene description is complete
-// we render that scene, by calling the render() function.
-//[/comment]
+// [comment]
+// Implementation of the Whitted-syle light transport algorithm (E [S*] (D|G) L)
+//
+// This function is the function that compute the color at the intersection point
+// of a ray defined by a position and a direction. Note that thus function is recursive (it calls itself).
+//
+// If the material of the intersected object is either reflective or reflective and refractive,
+// then we compute the reflection/refracton direction and cast two new rays into the scene
+// by calling the castRay() function recursively. When the surface is transparent, we mix
+// the reflection and refraction color using the result of the fresnel equations (it computes
+// the amount of reflection and refractin depending on the surface normal, incident view direction
+// and surface refractive index).
+//
+// If the surface is duffuse/glossy we use the Phong illumation model to compute the color
+// at the intersection point.
+// [/comment]
+Vec3f castRay(
+	const Vec3f &orig, const Vec3f &dir,
+	const std::vector<std::unique_ptr<Object>> &objects,
+	const std::vector<std::unique_ptr<Light>> &lights,
+	const Options &options,
+	uint32_t depth,
+	bool test = false)
+{
+	if (depth > options.maxDepth) {
+		return options.backgroundColor;
+	}
+
+	Vec3f hitColor = options.backgroundColor;
+	float tnear = kInfinity;
+	Vec2f uv;
+	uint32_t index = 0;
+	Object *hitObject = nullptr;
+	if (trace(orig, dir, objects, tnear, index, uv, &hitObject)) {
+		Vec3f hitPoint = orig + dir * tnear;
+		Vec3f N; // normal
+		Vec2f st; // st coordinates
+		hitObject->getSurfaceProperties(hitPoint, dir, index, uv, N, st);
+		Vec3f tmp = hitPoint;
+		switch (hitObject->materialType) {
+		case REFLECTION_AND_REFRACTION:
+		{
+			Vec3f reflectionDirection = normalize(reflect(dir, N));
+			Vec3f refractionDirection = normalize(refract(dir, N, hitObject->ior));
+			Vec3f reflectionRayOrig = (dotProduct(reflectionDirection, N) < 0) ?
+				hitPoint - N * options.bias :
+				hitPoint + N * options.bias;
+			Vec3f refractionRayOrig = (dotProduct(refractionDirection, N) < 0) ?
+				hitPoint - N * options.bias :
+				hitPoint + N * options.bias;
+			Vec3f reflectionColor = castRay(reflectionRayOrig, reflectionDirection, objects, lights, options, depth + 1, 1);
+			Vec3f refractionColor = castRay(refractionRayOrig, refractionDirection, objects, lights, options, depth + 1, 1);
+			float kr;
+			fresnel(dir, N, hitObject->ior, kr);
+			hitColor = reflectionColor * kr + refractionColor * (1 - kr);
+			break;
+		}
+		case REFLECTION:
+		{
+			float kr;
+			fresnel(dir, N, hitObject->ior, kr);
+			Vec3f reflectionDirection = reflect(dir, N);
+			Vec3f reflectionRayOrig = (dotProduct(reflectionDirection, N) < 0) ?
+				hitPoint + N * options.bias :
+				hitPoint - N * options.bias;
+			hitColor = castRay(reflectionRayOrig, reflectionDirection, objects, lights, options, depth + 1) * kr;
+			break;
+		}
+		default:
+		{
+			// [comment]
+			// We use the Phong illumation model int the default case. The phong model
+			// is composed of a diffuse and a specular reflection component.
+			// [/comment]
+			Vec3f lightAmt = 0, specularColor = 0;
+			Vec3f shadowPointOrig = (dotProduct(dir, N) < 0) ?
+				hitPoint + N * options.bias :
+				hitPoint - N * options.bias;
+			// [comment]
+			// Loop over all lights in the scene and sum their contribution up
+			// We also apply the lambert cosine law here though we haven't explained yet what this means.
+			// [/comment]
+			for (uint32_t i = 0; i < lights.size(); ++i) {
+				Vec3f lightDir = lights[i]->position - hitPoint;
+				// square of the distance between hitPoint and the light
+				float lightDistance2 = dotProduct(lightDir, lightDir);
+				lightDir = normalize(lightDir);
+				float LdotN = std::max(0.f, dotProduct(lightDir, N));
+				Object *shadowHitObject = nullptr;
+				float tNearShadow = kInfinity;
+				// is the point in shadow, and is the nearest occluding object closer to the object than the light itself?
+				bool inShadow = trace(shadowPointOrig, lightDir, objects, tNearShadow, index, uv, &shadowHitObject) &&
+					tNearShadow * tNearShadow < lightDistance2;
+				lightAmt += (1 - inShadow) * lights[i]->intensity * LdotN;
+				Vec3f reflectionDirection = reflect(-lightDir, N);
+				specularColor += powf(std::max(0.f, -dotProduct(reflectionDirection, dir)), hitObject->specularExponent) * lights[i]->intensity;
+			}
+			hitColor = lightAmt * hitObject->evalDiffuseColor(st) * hitObject->Kd + specularColor * hitObject->Ks;
+			break;
+		}
+		}
+	}
+
+	return hitColor;
+}
+
+// [comment]
+// The main render function. This where we iterate over all pixels in the image, generate
+// primary rays and cast these rays into the scene. The content of the framebuffer is
+// saved to a file.
+// [/comment]
+void render(
+	const Options &options,
+	const std::vector<std::unique_ptr<Object>> &objects,
+	const std::vector<std::unique_ptr<Light>> &lights)
+{
+	Vec3f *framebuffer = new Vec3f[options.width * options.height];
+	Vec3f *pix = framebuffer;
+	float scale = tan(deg2rad(options.fov * 0.5));
+	float imageAspectRatio = options.width / (float)options.height;
+	Vec3f orig(0);
+	for (uint32_t j = 0; j < options.height; ++j) {
+		for (uint32_t i = 0; i < options.width; ++i) {
+			// generate primary ray direction
+			float x = (2 * (i + 0.5) / (float)options.width - 1) * imageAspectRatio * scale;
+			float y = (1 - 2 * (j + 0.5) / (float)options.height) * scale;
+			Vec3f dir = normalize(Vec3f(x, y, -1));
+			*(pix++) = castRay(orig, dir, objects, lights, options, 0);
+		}
+	}
+
+	// save framebuffer to file
+	std::ofstream ofs;
+	ofs.open("./out.ppm");
+	ofs << "P6\n" << options.width << " " << options.height << "\n255\n";
+	for (uint32_t i = 0; i < options.height * options.width; ++i) {
+		char r = (char)(255 * clamp(0, 1, framebuffer[i].x));
+		char g = (char)(255 * clamp(0, 1, framebuffer[i].y));
+		char b = (char)(255 * clamp(0, 1, framebuffer[i].z));
+		ofs << r << g << b;
+	}
+
+	ofs.close();
+
+	delete[] framebuffer;
+}
+
+// [comment]
+// In the main function of the program, we create the scene (create objects and lights)
+// as well as set the options for the render (image widht and height, maximum recursion
+// depth, field-of-view, etc.). We then call the render function().
+// [/comment]
 int main(int argc, char **argv)
 {
-	srand(13);
-	std::vector<Sphere> spheres;
-	// position, radius, surface color, reflectivity, transparency, emission color
-	spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0));
-	spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5));
-	spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0));
-	spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
-	spheres.push_back(Sphere(Vec3f(-5.5, 0, -15), 3, Vec3f(0.90, 0.90, 0.90), 1, 0.0));
-	// light
-	spheres.push_back(Sphere(Vec3f(0.0, 20, -30), 3, Vec3f(0.00, 0.00, 0.00), 0, 0.0, Vec3f(3)));
-	render(spheres);
+	// creating the scene (adding objects and lights)
+	std::vector<std::unique_ptr<Object>> objects;
+	std::vector<std::unique_ptr<Light>> lights;
+
+	Sphere *sph1 = new Sphere(Vec3f(-1, 0, -12), 2);
+	sph1->materialType = DIFFUSE_AND_GLOSSY;
+	sph1->diffuseColor = Vec3f(0.6, 0.7, 0.8);
+	Sphere *sph2 = new Sphere(Vec3f(0.5, -0.5, -8), 1.5);
+	sph2->ior = 1.5;
+	sph2->materialType = REFLECTION_AND_REFRACTION;
+
+	objects.push_back(std::unique_ptr<Sphere>(sph1));
+	objects.push_back(std::unique_ptr<Sphere>(sph2));
+
+	Vec3f verts[4] = { { -5,-3,-6 },{ 5,-3,-6 },{ 5,-3,-16 },{ -5,-3,-16 } };
+	uint32_t vertIndex[6] = { 0, 1, 3, 1, 2, 3 };
+	Vec2f st[4] = { { 0, 0 },{ 1, 0 },{ 1, 1 },{ 0, 1 } };
+	MeshTriangle *mesh = new MeshTriangle(verts, vertIndex, 2, st);
+	mesh->materialType = DIFFUSE_AND_GLOSSY;
+
+	objects.push_back(std::unique_ptr<MeshTriangle>(mesh));
+
+	lights.push_back(std::unique_ptr<Light>(new Light(Vec3f(-20, 70, 20), 0.5)));
+	lights.push_back(std::unique_ptr<Light>(new Light(Vec3f(30, 50, -12), 1)));
+
+	// setting up options
+	Options options;
+	options.width = 640;
+	options.height = 480;
+	options.fov = 90;
+	options.backgroundColor = Vec3f(0.235294, 0.67451, 0.843137);
+	options.maxDepth = 5;
+	options.bias = 0.00001;
+
+	// finally, render
+	render(options, objects, lights);
 
 	return 0;
 }

@@ -21,10 +21,10 @@ public:
 		}
 		return *this;
 	}
-	float dot(Vector3<T> vec) { return x*vec.x + y*vec.y + z*vec.z; }
-	Vector3<T> operator * (const T &f) const { return Vec3<T>(x * f, y * f, z * f); }
+	float dot(Vector3<T> vec) const { return x*vec.x + y*vec.y + z*vec.z; }
+	Vector3<T> operator * (const T &f) const { return Vector3<T>(x * f, y * f, z * f); }
 	Vector3<T> operator * (const Vector3<T> &v) const { return Vec3<T>(x * v.x, y * v.y, z * v.z); }
-	Vector3<T> operator + (const Vector3<T> &v) { return Vector<T>(x + v.x, y + v.y, z + v.z); }
+	Vector3<T> operator + (const Vector3<T> &v) { return Vector3<T>(x + v.x, y + v.y, z + v.z); }
 	Vector3<T> operator - (const Vector3<T> &v) { return Vector3<T>(x - v.x, y - v.z, z - v.z); }
 	Vector3<T> operator - () { return Vector3(-x, -y, -z); }
 };
