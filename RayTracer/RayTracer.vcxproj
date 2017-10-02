@@ -146,6 +146,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Raytracer.cpp" />
     <ClCompile Include="renderable.cpp" />
+    <ClCompile Include="RenderOptions.cpp" />
     <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="Vector3.cpp" />
   </ItemGroup>

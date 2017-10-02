@@ -4,10 +4,10 @@
 #include "Vector3.cpp"
 #include "renderable.cpp"
 
-class Sphere : protected Renderable {
+class Sphere : public Renderable {
 public:
 	float radius;
-	Sphere(Vector3f pos, float rad, Material props) : Renderable(pos, props), radius(radius) {}
+	Sphere(Vector3f pos, float rad, Material props) : Renderable(pos, props), radius(rad) {}
 	virtual bool intersects(Vector3f &rayOrigin, Vector3f &rayDirection, float &distance) {
 		Vector3f toCenter = this->center - rayOrigin;
 		float tca = toCenter.dot(rayDirection);
