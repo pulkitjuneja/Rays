@@ -84,17 +84,18 @@ protected:
 public:
 	void render(RenderOptions* options) {
 		Vector3f* frameBuffer = new Vector3f[options->height * options->width];
-		float scale = tan((options->fov / 2)*PI / 180.0);
+		float scale = tan(options->fov * 0.5 *PI / 180.0);
 		Vector3f origin(0, 0, 0);
 		int count = 0;
-		for (int i = 0; i < options->width; i++) {
-			for (int j = 0; j < options->height; j++) {
-				float x = (2 * (i + 0.5) / (float)options->width - 1)*options->aspectRatio*scale;
-				float y = (1 - 2 * (j + 0.5) / (float)options->height)*scale;
-				Vector3<float> dir(x, y, -1);
+		for (int j = 0; j < options->height; j++) {
+			for (int i = 0; i < options->width; i++) {
+				float x = (2 * ((i + 0.5) / (float)options->width) - 1)*options->aspectRatio*scale;
+				float y = (1 - 2 * ((j + 0.5) / (float)options->height))*scale;
+				Vector3f dir(x, y, -1);
+				dir = dir.normalize();
+				//std::cout << "( " << dir.x << " , " << dir.y << " )\n";
 				Vector3f result = trace(origin, dir, options->maxDepth);
-				frameBuffer[count] = result;
-				count++;
+				frameBuffer[count++] = result;
 			}
 		}
 		ofstream ofs("finalImage.ppm", ios::out);
