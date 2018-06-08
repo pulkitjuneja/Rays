@@ -32,24 +32,29 @@ class RayTracer
 			int index;
 			hitObject->getProperties(phit, raydirection, index, uv, nhit);
 			float bias = 1e-4;
-			switch (hitObject->surfaceProperties.type)
+			float inside = false;
+			if (raydirection.dot(nhit))
 			{
-			case DIFFUSE_AND_GLOSSY:
-				Vector3f lightAmt(0, 0, 0), specularAmount(0, 0, 0);
-				Vector3f shadowPointOrig = (raydirection.dot(nhit) < 0) ? phit + nhit * bias : phit - nhit * bias;
-				for (vector<Light *>::iterator lt = lights.begin(); lt != lights.end(); lt++)
+				switch (hitObject->surfaceProperties.type)
 				{
-					Vector3f lightDir = ((*lt)->position - phit).normalize();
-					float distanceToLight = ((*lt)->position - phit).lengthSquared();
-					float LdotN = std::max(0.0f, lightDir.dot(nhit));
-					Renderable *shadowHitObject = NULL;
-					float tnearShadow = INT32_MAX;
-					bool isInShadow = checkRayCollision(shadowPointOrig, lightDir, &shadowHitObject, tnearShadow) && (tnearShadow * tnearShadow < distanceToLight);
-					lightAmt = lightAmt + (*lt)->intensity * LdotN * (1 - isInShadow);
-					Vector3f reflectionDir = reflect(-lightDir, nhit);
-					specularAmount = specularAmount + (*lt)->intensity * pow(max(0.0f, -reflectionDir.dot(raydirection)), hitObject->surfaceProperties.specularExponent);
+				case DIFFUSE_AND_GLOSSY:
+					Vector3f lightAmt(0, 0, 0), specularAmount(0, 0, 0);
+					Vector3f shadowPointOrig = phit + nhit * bias;
+					for (vector<Light *>::iterator lt = lights.begin(); lt != lights.end(); lt++)
+					{
+						Vector3f lightDir = ((*lt)->position - phit).normalize();
+						float distanceToLight = ((*lt)->position - phit).lengthSquared();
+						float LdotN = std::max(0.0f, lightDir.dot(nhit));
+						Renderable *shadowHitObject = NULL;
+						float tnearShadow = INT32_MAX;
+						bool isInShadow = checkRayCollision(shadowPointOrig, lightDir, &shadowHitObject, tnearShadow) && (tnearShadow * tnearShadow < distanceToLight);
+						lightAmt = lightAmt + (*lt)->intensity * LdotN * (1 - isInShadow);
+						Vector3f reflectionDir = reflect(-lightDir, nhit);
+						specularAmount = specularAmount + (*lt)->intensity * pow(max(0.0f, -reflectionDir.dot(raydirection)), hitObject->surfaceProperties.specularExponent);
+					}
+					hitColor = hitObject->surfaceProperties.diffuseColor * lightAmt * hitObject->surfaceProperties.Kd + specularAmount * hitObject->surfaceProperties.Ks;
+					//case REFLECTION:
 				}
-				hitColor = hitObject->surfaceProperties.diffuseColor * lightAmt * hitObject->surfaceProperties.Kd + specularAmount * hitObject->surfaceProperties.Ks;
 			}
 		}
 

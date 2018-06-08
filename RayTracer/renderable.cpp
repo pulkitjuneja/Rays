@@ -12,17 +12,16 @@ enum MaterialType
 
 class Material
 {
-  public:
+public:
 	float ior, Kd, Ks, specularExponent;
 	Vector3f diffuseColor;
 	MaterialType type;
-	Material(Vector3f dc, float ior, float Kd, float Ks, float specularExponent) : diffuseColor(dc), ior(ior),
-																				   Kd(Kd), Ks(Ks), specularExponent(specularExponent) {}
+	Material(Vector3f dc, float ior, float Kd, float Ks, float specularExponent) : diffuseColor(dc), ior(ior), Kd(Kd), Ks(Ks), specularExponent(specularExponent) {}
 };
 
 class Renderable
 {
-  public:
+public:
 	Vector3f center;
 	Material surfaceProperties;
 	virtual bool intersects(Vector3f &rayOrigin, Vector3f &rayDirection, float &distance) = 0;
