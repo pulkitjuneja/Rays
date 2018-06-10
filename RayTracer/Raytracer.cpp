@@ -17,13 +17,17 @@ using namespace std;
 class RayTracer
 {
   protected:
-	const int MAX_DEPTH = 5;
+	int MAX_DEPTH = 5;
 	vector<Renderable *> sceneObjects;
 	vector<Light *> lights;
 	Vector3f trace(Vector3f &rayOrigin, Vector3f &raydirection, int depth)
 	{
-		Renderable *hitObject = NULL;
 		Vector3f hitColor = Vector3f(0.5f, 0.5f, 0.5f);
+		if (depth > MAX_DEPTH)
+		{
+			return hitColor;
+		}
+		Renderable *hitObject = NULL;
 		float tnear = INT32_MAX;
 		if (checkRayCollision(rayOrigin, raydirection, &hitObject, tnear))
 		{
@@ -33,11 +37,16 @@ class RayTracer
 			hitObject->getProperties(phit, raydirection, index, uv, nhit);
 			float bias = 1e-4;
 			float inside = false;
+			if (depth > 1)
+			{
+				std::cout << depth << ",";
+			}
 			if (raydirection.dot(nhit))
 			{
 				switch (hitObject->surfaceProperties.type)
 				{
 				case DIFFUSE_AND_GLOSSY:
+				{
 					Vector3f lightAmt(0, 0, 0), specularAmount(0, 0, 0);
 					Vector3f shadowPointOrig = phit + nhit * bias;
 					for (vector<Light *>::iterator lt = lights.begin(); lt != lights.end(); lt++)
@@ -53,7 +62,17 @@ class RayTracer
 						specularAmount = specularAmount + (*lt)->intensity * pow(max(0.0f, -reflectionDir.dot(raydirection)), hitObject->surfaceProperties.specularExponent);
 					}
 					hitColor = hitObject->surfaceProperties.diffuseColor * lightAmt * hitObject->surfaceProperties.Kd + specularAmount * hitObject->surfaceProperties.Ks;
-					//case REFLECTION:
+					break;
+				}
+				case REFLECTION:
+				{
+					float kr;
+					fresnel(rayOrigin, raydirection, hitObject->surfaceProperties.ior, kr);
+					Vector3f reflectionDir = reflect(raydirection, nhit);
+					Vector3f reflectionOrigion = phit + nhit * bias;
+					hitColor = trace(reflectionOrigion, reflectionDir, depth + 1) * kr;
+					break;
+				}
 				}
 			}
 		}
@@ -85,6 +104,33 @@ class RayTracer
 		return false;
 	}
 
+	void fresnel(const Vector3f &I, const Vector3f &N, const float &ior, float &kr)
+	{
+		float cosi = clamp(-1, 1, I.dot(N));
+		float etai = 1, etat = ior;
+		if (cosi > 0)
+		{
+			std::swap(etai, etat);
+		}
+		// Compute sini using Snell's law
+		float sint = etai / etat * sqrtf(std::max(0.f, 1 - cosi * cosi));
+		// Total internal reflection
+		if (sint >= 1)
+		{
+			kr = 1;
+		}
+		else
+		{
+			float cost = sqrtf(std::max(0.f, 1 - sint * sint));
+			cosi = fabsf(cosi);
+			float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+			float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+			kr = (Rs * Rs + Rp * Rp) / 2;
+		}
+		// As a consequence of the conservation of energy, transmittance is given by:
+		// kt = 1 - kr;
+	}
+
 	float clamp(float lo, float hi, float v)
 	{
 		return std::max(lo, std::min(hi, v));
@@ -106,7 +152,8 @@ class RayTracer
 				Vector3f dir(x, y, -1);
 				dir = dir.normalize();
 				// std::cout << "( " << dir.x << " , " << dir.y << " )\n";
-				Vector3f result = trace(origin, dir, options->maxDepth);
+				MAX_DEPTH = options->maxDepth;
+				Vector3f result = trace(origin, dir, 0);
 				frameBuffer[count++] = result;
 			}
 		}

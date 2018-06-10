@@ -20,7 +20,7 @@ class Sphere : public Renderable
 			return false;
 		float thc = sqrt(radius * radius - d2);
 		distance = tca - thc;
-		return false;
+		return true;
 	}
 	virtual void getProperties(Vector3f &hitpoint, Vector3f &dir, int &index, Vector3f &uv, Vector3f &normal)
 	{
