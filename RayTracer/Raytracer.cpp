@@ -22,7 +22,7 @@ class RayTracer
 	vector<Light *> lights;
 	Vector3f trace(Vector3f &rayOrigin, Vector3f &raydirection, int depth)
 	{
-		Vector3f hitColor = Vector3f(0.5f, 0.5f, 0.5f);
+		Vector3f hitColor = Vector3f(0.235294f, 0.67451f, 0.843137f);
 		if (depth > MAX_DEPTH)
 		{
 			return hitColor;
@@ -37,10 +37,7 @@ class RayTracer
 			hitObject->getProperties(phit, raydirection, index, uv, nhit);
 			float bias = 1e-4;
 			float inside = false;
-			if (depth > 1)
-			{
-				std::cout << depth << ",";
-			}
+			//std::cout<<tnear<<"\n";
 			if (raydirection.dot(nhit))
 			{
 				switch (hitObject->surfaceProperties.type)
@@ -51,17 +48,19 @@ class RayTracer
 					Vector3f shadowPointOrig = phit + nhit * bias;
 					for (vector<Light *>::iterator lt = lights.begin(); lt != lights.end(); lt++)
 					{
+						Vector3f distanceToLightVector = ((*lt)->position - phit);
+						float distanceToLight = distanceToLightVector.lengthSquared();
 						Vector3f lightDir = ((*lt)->position - phit).normalize();
-						float distanceToLight = ((*lt)->position - phit).lengthSquared();
 						float LdotN = std::max(0.0f, lightDir.dot(nhit));
 						Renderable *shadowHitObject = NULL;
 						float tnearShadow = INT32_MAX;
 						bool isInShadow = checkRayCollision(shadowPointOrig, lightDir, &shadowHitObject, tnearShadow) && (tnearShadow * tnearShadow < distanceToLight);
+						//std::cout<<distanceToLight<<"\n";
 						lightAmt = lightAmt + (*lt)->intensity * LdotN * (1 - isInShadow);
 						Vector3f reflectionDir = reflect(-lightDir, nhit);
-						specularAmount = specularAmount + (*lt)->intensity * pow(max(0.0f, -reflectionDir.dot(raydirection)), hitObject->surfaceProperties.specularExponent);
+						specularAmount = specularAmount + (*lt)->intensity * pow(max(0.0f, -(reflectionDir.dot(raydirection))), hitObject->surfaceProperties.specularExponent);
 					}
-					hitColor = hitObject->surfaceProperties.diffuseColor * lightAmt * hitObject->surfaceProperties.Kd + specularAmount * hitObject->surfaceProperties.Ks;
+					hitColor = hitObject->surfaceProperties.diffuseColor * lightAmt * hitObject->surfaceProperties.Kd;
 					break;
 				}
 				case REFLECTION:

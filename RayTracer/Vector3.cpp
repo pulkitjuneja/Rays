@@ -9,7 +9,7 @@ class Vector3
 	T x, y, z;
 	Vector3() : x(0), y(0), z(0) {}
 	Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
-	T lengthSquared()
+	float lengthSquared()
 	{
 		return x * x + y * y + z * z;
 	}
@@ -37,7 +37,7 @@ class Vector3
 	Vector3<T> operator*(const T &f) const { return Vector3<T>(x * f, y * f, z * f); }
 	Vector3<T> operator*(const Vector3<T> &v) const { return Vector3<T>(x * v.x, y * v.y, z * v.z); }
 	Vector3<T> operator+(const Vector3<T> &v) { return Vector3<T>(x + v.x, y + v.y, z + v.z); }
-	Vector3<T> operator-(const Vector3<T> &v) { return Vector3<T>(x - v.x, y - v.z, z - v.z); }
+	Vector3<T> operator-(const Vector3<T> &v) { return Vector3<T>(x - v.x, y - v.y, z - v.z); }
 	Vector3<T> operator-() { return Vector3(-x, -y, -z); }
 };
 

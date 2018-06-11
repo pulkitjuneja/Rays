@@ -9,6 +9,7 @@ class Sphere : public Renderable
   public:
 	float radius;
 	Sphere(Vector3f pos, float rad, Material props) : Renderable(pos, props), radius(rad) {}
+
 	virtual bool intersects(Vector3f &rayOrigin, Vector3f &rayDirection, float &distance)
 	{
 		Vector3f toCenter = center - rayOrigin;
@@ -22,6 +23,7 @@ class Sphere : public Renderable
 		distance = tca - thc;
 		return true;
 	}
+	
 	virtual void getProperties(Vector3f &hitpoint, Vector3f &dir, int &index, Vector3f &uv, Vector3f &normal)
 	{
 		normal = (hitpoint - center).normalize();
