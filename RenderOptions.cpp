@@ -4,7 +4,7 @@
 
 class RenderOptions
 {
-  public:
+public:
 	int height;
 	int width;
 	float aspectRatio;
