@@ -1,6 +1,6 @@
 # Rays
 
-A path tracer written in C++ using the naive monte carlo algorithm
+A path tracer written in C++ using the naive monte carlo algorithm (under progress)
 
 Features
 * Glossy metals and reflective surfaces
@@ -11,4 +11,8 @@ To-D0
 * add support for external lights
 * support for textures
 * support triangles and mesh geometries
+### Some Progress Pics
+
+![image](https://pulkitjuneja.github.io/portfolio/rays.png)
+ 
 
