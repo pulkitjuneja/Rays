@@ -28,8 +28,14 @@ protected:
 			rec.calculateProperties(ray);
 			Ray scattered;
 			Vector3f attenuation;
-			rec.material->scatter(ray, rec, attenuation, scattered);
-			return trace(scattered, depth + 1) * attenuation;
+			if (rec.material->scatter(ray, rec, attenuation, scattered))
+			{
+				return trace(scattered, depth + 1) * attenuation;
+			}
+			else
+			{
+				return Vector3f(0.0f, 0.0f, 0.0f);
+			}
 		}
 		else
 		{
@@ -61,8 +67,8 @@ public:
 				Vector3f color(0, 0, 0);
 				for (int s = 0; s < ns; s++)
 				{
-					float x = (2 * ((i + 0.5) / (float)options->width) - 1) * options->aspectRatio * scale;
-					float y = (1 - 2 * ((j + 0.5) / (float)options->height)) * scale;
+					float x = (2 * ((i + drand48()) / (float)options->width) - 1) * options->aspectRatio * scale;
+					float y = (1 - 2 * ((j + drand48()) / (float)options->height)) * scale;
 					Vector3f dir(x, y, -1);
 					dir = dir.normalize();
 					Ray ray(origin, dir);

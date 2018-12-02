@@ -9,7 +9,7 @@ public:
 	T x, y, z;
 	Vector3() : x(0), y(0), z(0) {}
 	Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
-	float lengthSquared()
+	float lengthSquared() const
 	{
 		return x * x + y * y + z * z;
 	}
