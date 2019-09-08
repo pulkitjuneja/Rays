@@ -1,10 +1,10 @@
 #pragma once
-#include "renderable.cpp"
+#include "Renderable.hpp"
 
 class Material;
 class Renderable;
 
-struct HitRecord
+struct HitData
 {
   Vector3f hitPoint;
   Vector3f normal;

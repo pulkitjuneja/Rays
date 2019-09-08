@@ -1,42 +1,27 @@
-#pragma once
-#include "renderable.cpp"
-#include "HitRecord.cpp"
-#include <vector>
+#include "RenderableList.hpp"
 
-using namespace std;
-
-class RenderableList : public Renderable
+void RenderableList::add(Renderable *object)
 {
-public:
-  vector<Renderable *> list;
+  list.push_back(object);
+}
 
-  RenderableList() : list()
+bool RenderableList::intersects(Ray &ray, HitData &rec)
+{
+  bool hitAnything = false;
+  int count = 0;
+  float closestSoFar = MAXFLOAT;
+  for (vector<Renderable *>::iterator it = list.begin(); it != list.end(); it++)
   {
-  }
-
-  void add(Renderable *object)
-  {
-    list.push_back(object);
-  }
-
-  virtual bool intersects(Ray &ray, HitRecord &rec)
-  {
-    bool hitAnything = false;
-    int count = 0;
-    float closestSoFar = MAXFLOAT;
-    for (vector<Renderable *>::iterator it = list.begin(); it != list.end(); it++)
+    HitData temprec;
+    if ((*it)->intersects(ray, temprec))
     {
-      HitRecord temprec;
-      if ((*it)->intersects(ray, temprec))
+      if (temprec.t < closestSoFar)
       {
-        if (temprec.t < closestSoFar)
-        {
-          closestSoFar = temprec.t;
-          rec = temprec;
-          hitAnything = true;
-        }
+        closestSoFar = temprec.t;
+        rec = temprec;
+        hitAnything = true;
       }
     }
-    return hitAnything;
   }
-};
+  return hitAnything;
+}

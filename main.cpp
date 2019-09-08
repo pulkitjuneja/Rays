@@ -1,7 +1,7 @@
-#include "Raytracer.cpp"
+#include "Raytracer.hpp"
 #include "RenderOptions.cpp"
-#include "RenderableList.cpp"
-#include "Sphere.cpp"
+#include "RenderableList.hpp"
+#include "Sphere.hpp"
 #include "iostream"
 
 using namespace std;

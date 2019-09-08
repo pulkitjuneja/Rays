@@ -5,11 +5,11 @@
 #include "Ray.cpp"
 
 class Material;
-struct HitRecord;
+struct HitData;
 
 class Renderable
 {
 public:
-  virtual bool intersects(Ray &ray, HitRecord &rec) = 0;
+  virtual bool intersects(Ray &ray, HitData &rec) = 0;
   virtual void getSurfaceProperties(Vector3f &hitPoint, Vector3f &normal, Material *&Material){};
 };
