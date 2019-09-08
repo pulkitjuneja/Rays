@@ -4,6 +4,7 @@
 #include "Vector3.cpp"
 #include "renderable.cpp"
 #include "Ray.cpp"
+#include "HitRecord.cpp"
 
 class Sphere : public Renderable
 {
