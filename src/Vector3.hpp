@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef VECTOR3_H
+#define VECTOR3_H
+
 #include "global.h"
 
 template <class T>
@@ -24,3 +27,5 @@ public:
 
 typedef Vector3<float> Vector3f;
 typedef Vector3<int> Vector3i;
+
+#endif

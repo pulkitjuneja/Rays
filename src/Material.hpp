@@ -1,4 +1,8 @@
 #pragma once
+
+#ifndef MATERIAL_H
+#define MATERIAL_H
+
 #include "HitData.cpp"
 #include "Ray.cpp"
 #include "global.h"
@@ -49,3 +53,5 @@ public:
 
   virtual bool scatter(const Ray &inputRay, HitData &rec, Vector3f &attenuation, Ray &outputRay);
 };
+
+#endif

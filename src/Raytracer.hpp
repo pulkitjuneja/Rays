@@ -1,10 +1,13 @@
 #pragma once
 
+#ifndef RAYTRACER_H
+#define RAYTRACER_H
+
 #include "Vector3.cpp"
 #include "global.h"
-#include "RenderOptions.cpp"
+#include "RenderOptions.hpp"
 #include "Material.hpp"
-#include "RenderableList.hpp"
+#include "Scene.hpp"
 
 #define PI 3.14159265
 
@@ -14,8 +17,7 @@ class RayTracer
 {
 protected:
 	int MAX_DEPTH;
-	RenderableList *scene;
-	// vector<Renderable *> sceneObjects;
+	Scene *scene;
 	Vector3f trace(Ray &ray, int depth);
 	template <typename T>
 	T clamp(const T &value, const T &low, const T &high)
@@ -25,7 +27,8 @@ protected:
 
 public:
 	void render(RenderOptions *options);
-	void setScene(RenderableList *scene);
+	void setScene(Scene *scene);
 	void writeToImgae(Vector3f *frameBuffer, RenderOptions *options);
-	// void addObjectToScene(Renderable *object) { sceneObjects.push_back(object); }
 };
+
+#endif

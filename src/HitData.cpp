@@ -1,4 +1,8 @@
 #pragma once
+
+#ifndef HITDATA_H
+#define HITDATA_H
+
 #include "Renderable.hpp"
 
 class Material;
@@ -17,3 +21,5 @@ struct HitData
     hitObject->getSurfaceProperties(hitPoint, normal, material);
   }
 };
+
+#endif

@@ -37,21 +37,20 @@ void RayTracer::render(RenderOptions *options)
     MAX_DEPTH = options->maxDepth;
     int ns = 50;
     Vector3f *frameBuffer = new Vector3f[options->height * options->width];
-    float scale = tan(options->fov * 0.5 * PI / 180.0);
-    Vector3f origin(0, 0, 0);
     int count = 0;
-    for (int j = 0; j < options->height; j++)
+    for (int j = options->height - 1; j >= 0; j--)
     {
         for (int i = 0; i < options->width; i++)
         {
             Vector3f color(0, 0, 0);
             for (int s = 0; s < ns; s++)
             {
-                float x = (2 * ((i + drand48()) / (float)options->width) - 1) * options->aspectRatio * scale;
-                float y = (1 - 2 * ((j + drand48()) / (float)options->height)) * scale;
-                Vector3f dir(x, y, -1);
-                dir = dir.normalize();
-                Ray ray(origin, dir);
+                float x = float(i + drand48()) / float(options->width);
+                float y = float(j + drand48()) / float(options->height);
+                Ray ray = scene->camera.getCameraRay(x, y);
+                // Vector3f dir(x, y, -1);
+                // dir = dir.normalize();
+                // Ray ray(origin, dir);
                 color = color + trace(ray, 0);
             }
             color = color / ns;
@@ -62,7 +61,7 @@ void RayTracer::render(RenderOptions *options)
     writeToImgae(frameBuffer, options);
 }
 
-void RayTracer::setScene(RenderableList *scene)
+void RayTracer::setScene(Scene *scene)
 {
     this->scene = scene;
 }

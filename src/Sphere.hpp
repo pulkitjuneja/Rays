@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef SPHERE_H
+#define SPHERE_H
+
 #include "global.h"
 #include "Vector3.cpp"
 #include "Renderable.hpp"
@@ -17,3 +20,5 @@ public:
   virtual bool intersects(Ray &ray, HitData &rec);
   virtual void getSurfaceProperties(Vector3f &hitPoint, Vector3f &normal, Material *&mat);
 };
+
+#endif
