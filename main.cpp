@@ -15,7 +15,7 @@ int main()
 	options.maxDepth = 50;
 	options.aspectRatio = (float)options.width / (float)options.height;
 	Scene *scene = new Scene(options);
-	scene->camera.setPositionAndRotation(Vector3f(0, 1, 0), Vector3f(0, 0, -1));
+	scene->camera.setPositionAndRotation(Vector3f(0, 0.5f, 0), Vector3f(0, 0, -1));
 	scene->add(new Sphere(Vector3f(0, -0.2, -10), 1, new Lambertian(Vector3f(0.2, 0.2, 0.2))));
 	scene->add(new Sphere(Vector3f(2, -0.2, -10), 1, new Metal(Vector3f(0.7, 0.7, 0.7), 0.6f)));
 	scene->add(new Sphere(Vector3f(-2, -0.2, -10), -1, new Dielectric(1.3f)));
