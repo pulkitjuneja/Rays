@@ -17,3 +17,17 @@ Ray Camera::getCameraRay(float x, float y)
     dir = dir.normalize();
     return Ray(origin, dir);
 }
+
+void Camera::setPositionAndRotation(Vector3f worldPosition, Vector3f target)
+{
+    float halfHeight = float(height.y / 2);
+    float halfWidth = float(width.x / 2);
+    origin = worldPosition;
+    Vector3f worldUp(0, 1, 0);
+    Vector3f dir = (worldPosition - target).normalize();
+    Vector3f right = worldUp.cross(dir).normalize();
+    Vector3f up = dir.cross(right);
+    lowerLeftCorner = origin - (right * halfWidth) - (up * halfHeight) - dir;
+    width = right * (halfWidth * 2);
+    height = up * (halfHeight * 2);
+}

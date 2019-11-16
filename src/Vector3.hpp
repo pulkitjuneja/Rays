@@ -17,6 +17,7 @@ public:
 	Vector3(const Vector3 &c);
 	Vector3<T> &normalize();
 	float dot(Vector3<T> vec) const;
+	Vector3<T> cross(Vector3<T> vec) const;
 	Vector3<T> operator*(const T &f) const;
 	Vector3<T> operator*(const Vector3<T> &v) const;
 	Vector3<T> operator+(const Vector3<T> &v);

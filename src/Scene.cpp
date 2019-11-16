@@ -1,8 +1,15 @@
 #include "Scene.hpp"
 
+Scene::Scene(RenderOptions &options) : camera(createCamera(options)) {}
+
 void Scene::add(Renderable *object)
 {
   sceneObjects.push_back(object);
+}
+
+Camera Scene::createCamera(RenderOptions &options)
+{
+  return Camera(options.fov, options.aspectRatio);
 }
 
 bool Scene::intersects(Ray &ray, HitData &rec)

@@ -16,6 +16,8 @@ class Camera
 public:
     Camera(float fov, float aspect);
     Ray getCameraRay(float x, float y);
+    // keepin gthis a seperate function so user can move the camera as and when required
+    void setPositionAndRotation(Vector3f worldPosition, Vector3f target);
 };
 
 #endif

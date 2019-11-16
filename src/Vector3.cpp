@@ -71,5 +71,14 @@ Vector3<T> Vector3<T>::operator-()
 	return Vector3(-x, -y, -z);
 }
 
+template <class T>
+Vector3<T> Vector3<T>::cross(Vector3<T> other) const
+{
+	T x = this->y * other.z - this->z * other.y;
+	T y = this->z * other.x - this->x * other.z;
+	T z = this->x * other.y - this->y * other.x;
+	return Vector3<T>(x, y, z);
+}
+
 typedef Vector3<float> Vector3f;
 typedef Vector3<int> Vector3i;

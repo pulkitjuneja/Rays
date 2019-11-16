@@ -7,6 +7,7 @@
 #include "HitData.cpp"
 #include <vector>
 #include "Camera.hpp"
+#include "RenderOptions.hpp"
 
 using namespace std;
 
@@ -16,8 +17,9 @@ public:
 	vector<Renderable *> sceneObjects;
 	Camera camera;
 
-	Scene(Camera camera) : sceneObjects(), camera(camera){};
+	Scene(RenderOptions &options);
 	void add(Renderable *object);
+	Camera createCamera(RenderOptions &options);
 	void setCamera(Camera camera);
 	virtual bool intersects(Ray &ray, HitData &rec);
 };
