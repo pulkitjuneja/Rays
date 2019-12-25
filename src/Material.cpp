@@ -40,11 +40,12 @@ bool Metal::scatter(const Ray &inputRay, HitData &rec, Vector3f &attenuation, Ra
 
 bool Dielectric::refract(const Vector3f &direction, const Vector3f &normal, const float niOverNt, Vector3f refracted)
 {
+
     float dot = direction.dot(normal);
     float discriminant = 1 - ((niOverNt * niOverNt) * (1 - dot * dot));
     if (discriminant > 0)
     {
-        refracted = (direction - normal * dot) * niOverNt - normal * sqrt(discriminant);
+        refracted = ((direction - normal * dot) * niOverNt) - (normal * sqrt(discriminant));
         refracted = refracted.normalize();
         return true;
     }
@@ -74,7 +75,7 @@ bool Dielectric::scatter(const Ray &inputRay, HitData &rec, Vector3f &attenuatio
     {
         outwardNormal = -rec.normal;
         niOverNt = refractiveIndex;
-        float length = inputRay.direction.lengthSquared();
+        float length = sqrt(inputRay.direction.lengthSquared());
         cosine = inputRay.direction.dot(rec.normal);
         cosine = sqrt(1 - refractiveIndex * refractiveIndex * (1 - cosine * cosine));
     }
@@ -82,9 +83,10 @@ bool Dielectric::scatter(const Ray &inputRay, HitData &rec, Vector3f &attenuatio
     {
         outwardNormal = rec.normal;
         niOverNt = 1.0f / refractiveIndex;
-        float length = inputRay.direction.lengthSquared();
+        float length = sqrt(inputRay.direction.lengthSquared());
         cosine = -(inputRay.direction.dot(rec.normal));
     }
+
     if (refract(inputRay.direction, outwardNormal, niOverNt, refractedDirection))
     {
         reflectionProb = schlick(cosine, refractiveIndex);
@@ -93,6 +95,7 @@ bool Dielectric::scatter(const Ray &inputRay, HitData &rec, Vector3f &attenuatio
     {
         reflectionProb = 1.0f;
     }
+
     if (drand48() < reflectionProb)
     {
         outputRay = Ray(rec.hitPoint, refractedDirection);
