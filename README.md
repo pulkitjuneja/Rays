@@ -13,6 +13,6 @@ To-D0
 * support triangles and mesh geometries
 ### Some Progress Pics
 
-![image](https://pulkitjuneja.github.io/portfolio/rays.png)
+![image](https://raw.githubusercontent.com/pulkitjuneja/Rays/master/Screenshot.png)
  
 
