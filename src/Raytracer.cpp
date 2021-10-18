@@ -1,5 +1,6 @@
-#pragma once
+
 #include "Raytracer.hpp"
+#include <mutex>
 
 using namespace std;
 
@@ -101,14 +102,13 @@ void RayTracer::setScene(Scene *scene)
 void RayTracer::writeToImgae(Vector3f *frameBuffer, RenderOptions *options)
 {
     ofstream ofs("finalImage.ppm", ios::out);
-    ofs << "P6\n"
-        << options->width << " " << options->height << "\n255\n";
+    ofs << "P3\n"<< options->width << " " << options->height << "\n255\n";
     for (uint32_t i = 0; i < options->height * options->width; ++i)
     {
-        char r = (char)(255 * clamp(frameBuffer[i].x, 0.0f, 1.0f));
-        char g = (char)(255 * clamp(frameBuffer[i].y, 0.0f, 1.0f));
-        char b = (char)(255 * clamp(frameBuffer[i].z, 0.0f, 1.0f));
-        ofs << r << g << b;
+        int r = (int)(255 * clamp(frameBuffer[i].x, 0.0f, 1.0f));
+        int g = (int)(255 * clamp(frameBuffer[i].y, 0.0f, 1.0f));
+        int b = (int)(255 * clamp(frameBuffer[i].z, 0.0f, 1.0f));
+        ofs << r << "\t" << g << "\t" << b << "\n";
     }
     ofs.close();
     delete[] frameBuffer;
