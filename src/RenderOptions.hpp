@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef RENDEROPTIONS_H
+#define RENDEROPTIONS_H
+
 #include "Vector3.cpp"
 
 class RenderOptions
@@ -11,3 +14,5 @@ public:
 	float fov;
 	int maxDepth;
 };
+
+#endif

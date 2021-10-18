@@ -1,10 +1,14 @@
 #pragma once
-#include "renderable.cpp"
+
+#ifndef HITDATA_H
+#define HITDATA_H
+
+#include "Renderable.hpp"
 
 class Material;
 class Renderable;
 
-struct HitRecord
+struct HitData
 {
   Vector3f hitPoint;
   Vector3f normal;
@@ -17,3 +21,5 @@ struct HitRecord
     hitObject->getSurfaceProperties(hitPoint, normal, material);
   }
 };
+
+#endif
